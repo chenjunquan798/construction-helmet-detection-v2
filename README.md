@@ -8,6 +8,51 @@
 
 ---
 
+## 在线试用
+
+| 方式 | 地址 | 说明 |
+| --- | --- | --- |
+| **在线（推荐）** | **https://chenjunquan798.github.io/construction-helmet-detection-v2/** | GitHub Pages 托管，浏览器打开即用，无需安装、无需摄像头 |
+| 本地离线 | 双击仓库内 `index.html` | 零依赖，断网可用 |
+
+打开后建议按这条路径试：**图片检测 › 生成示例图片 › 执行图片检测** → 看右侧五条规则与复述 → 再切「对比工作台 › 批量仿真」看 500 次对比。建议桌面端 Chrome / Edge，窗口宽度 ≥ 1200。
+
+## 实际运行截图
+
+以下均为本项目**实际运行页面直接截取**（Edge 无头模式，1680 px 视口，场景 S03 / 批量仿真 500 次），未做拼接或后期修改。
+
+### 完整界面（五个标签页）
+
+![完整界面](screenshots/overview.png)
+
+顶部为五个标签页（比 V1 多出「图片检测」），中栏为闸机通道画面，右栏为决策链与中文复述，左栏为控制台与阈值。
+
+### 闸机画面：检出盔体裂纹 → 拒绝通行
+
+![闸机画面](screenshots/monitor-scene.png)
+
+场景 S03（盔体裂纹）：四个检测框（安全帽 / 头部 / 人脸 / 下颚带）叠加在画面上，右上角「斜上方相机·盔体裁剪」把盔体放大后标出裂纹，底部横幅给出 `DENY · DENY_DAMAGE 拦截`。
+
+### 图片检测：导入一张图，读到什么
+
+| 画面叠加 | 像素分析结果 |
+| --- | --- |
+| ![图片检测画面](screenshots/image-canvas.png) | ![像素分析](screenshots/image-analysis.png) |
+
+左侧为导入的图片与叠加的「疑似安全帽·黄色 0.83」候选框、`ALLOW · 闸机放行` 横幅；右侧为真实像素统计：采样 72,000 点、HSV 主色相 H≈47°、候选区域 120×100 px / 12 网格连通、色相分布黄色 79.7%。面板底部也写明了破损与佩戴方式是人工复核项。
+
+### 五条规则的决策链
+
+![决策链](screenshots/decision-chain.png)
+
+### 批量仿真：500 次
+
+![批量仿真](screenshots/batch-chart.png)
+
+完整四任务方案放行 52 / 拦截 448 / **漏放 0**；仅检测「有无安全帽」的传统方案放行 347 / 拦截 153 / **漏放 295**。
+
+---
+
 ## V2 新增：图片检测
 
 打开 **「图片检测」** 标签页：
@@ -83,6 +128,7 @@ assets/image-lab.js           V2 新增：图片载入、像素分析、候选�
 assets/styles.css             浅色主题样式
 inference/yolov8_service.py   真实 YOLOv8 推理服务（FastAPI + ultralytics），支持 image_b64
 inference/requirements.txt
+screenshots/                  README 所用实际运行截图（本机运行页面截取）
 ```
 
 ## 接入真实 YOLOv8
@@ -128,4 +174,4 @@ App.setSource('http://127.0.0.1:8000')
 | `app.js` | 基础台账重放 | 增加 `imageOnly` 重放、暴露 `addHistory` / `toast` |
 | 推理服务 | 帧输入 | 补充图片模式接入说明 |
 
-V1 仓库用于对比两代能力边界；两代各自独立、均可直接运行。
+V1 仓库用于对比两代能力边界（[construction-helmet-detection-v1](https://github.com/chenjunquan798/construction-helmet-detection-v1)，在线试用 <https://chenjunquan798.github.io/construction-helmet-detection-v1/>）；两代各自独立、均可直接运行。
