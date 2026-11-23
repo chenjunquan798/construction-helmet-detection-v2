@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工地入口安全帽佩戴检测系统 · YOLOv8</title>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">安</div>
+    <div>
+      <h1>工地入口安全帽佩戴检测系统</h1>
+      <p>YOLOv8 多任务推理 · 颜色等级 / 破损 / 规范佩戴 · 员工通道刷脸联动</p>
+    </div>
+  </div>
+  <div class="status-strip">
+    <span class="chip amber" id="modeChip"><span class="dot"></span>演示仿真模式</span>
+    <span class="chip gray" id="channelChip">A-01 员工入口</span>
+    <span class="chip blue" id="sourceChip">推理源：仿真推理</span>
+    <span class="chip gray" id="clockChip">--:--:--</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="monitor">实时监控</button>
+  <button class="tab-btn" data-tab="image">图片检测</button>
+  <button class="tab-btn" data-tab="compare">对比工作台</button>
+  <button class="tab-btn" data-tab="history">通行台账</button>
+  <button class="tab-btn" data-tab="about">系统说明与接入</button>
+</nav>
+
+<main>
+
+<!-- ==================== 实时监控 ==================== -->
+<section id="tab-monitor" class="tab-panel active">
+  <div class="grid-monitor">
+
+    <!-- 左：控制台 -->
+    <aside>
+      <div class="card">
+        <div class="card-head"><h2>控制台</h2><span class="sub">单次检测</span></div>
+        <div class="card-body">
+          <div class="field">
+            <label>通行通道</label>
+            <select id="selChannel"></select>
+          </div>
+          <div class="field">
+            <label>刷脸识别员工（1:N 命中）</label>
+            <select id="selStaff"></select>
+          </div>
+          <div class="field">
+            <label>场景预设</label>
+            <select id="selScene"></select>
+          </div>
+          <div class="btn-row" style="margin-bottom:12px">
+            <button class="btn small ghost" id="btnRandom">随机场景</button>
+            <button class="btn small ghost" id="btnReset">重置参数</button>
+          </div>
+
+          <div class="divider"></div>
+          <p class="section-title">人工微调（覆盖场景预设）</p>
+          <div class="field">
+            <label>实际佩戴帽色</label>
+            <select id="selColor"></select>
+          </div>
+          <div class="field">
+            <label>盔体状态</label>
+            <select id="selDamage"></select>
+          </div>
+          <div class="field">
+            <label>佩戴方式</label>
+            <select id="selWear"></select>
+          </div>
+          <div class="field">
+            <label>人脸相似度 <span id="faceScoreLbl" style="color:var(--blue);font-weight:600"></span></label>
+            <div class="range-row"><input type="range" id="rngFace" min="0.20" max="0.99" step="0.01"><div class="range-val" id="faceScoreVal">0.95</div></div>
+          </div>
+          <div class="check-grid" style="margin-top:8px">
+            <label class="check"><input type="checkbox" id="chkLive" checked>人脸活体通过</label>
+            <label class="check"><input type="checkbox" id="chkHelmet" checked>佩戴安全帽</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>决策阈值</h2><span class="sub">实时生效</span></div>
+        <div class="card-body" id="thresholdBox"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>规则开关</h2><span class="sub">策略模拟</span></div>
+        <div class="card-body">
+          <div class="check-grid" id="enabledBox"></div>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn small" id="btnFull">完整方案</button>
+            <button class="btn small" id="btnDetectOnly">仅检测帽</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="btn-row">
+            <button class="btn primary" id="btnRun">执行检测</button>
+            <button class="btn" id="btnBatch">批量仿真</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 中：画面 + 四任务 -->
+    <div class="center-col">
+      <div class="card">
+        <div class="scene-toolbar">
+          <div class="seg" id="viewSeg">
+            <button class="active" data-view="dual">双视角</button>
+            <button data-view="front">正面视角</button>
+            <button data-view="top">顶部视角</button>
+          </div>
+          <label class="check"><input type="checkbox" id="chkBoxes" checked>检测框</label>
+          <label class="check"><input type="checkbox" id="chkKeypoints" checked>姿态关键点</label>
+          <span class="chip gray" id="frameChip" style="margin-left:auto">frame_--</span>
+        </div>
+        <div class="scene-wrap"><svg id="sceneSvg" viewBox="0 0 720 400" role="img" aria-label="闸机通道监控画面"></svg></div>
+        <div class="legend">
+          <span><i style="background:#2563a8"></i>头部框</span>
+          <span><i style="background:#0e7c86"></i>人脸框</span>
+          <span><i style="background:#5b4bb7"></i>安全帽框</span>
+          <span><i style="background:#b3730f"></i>下颚带框</span>
+          <span><i style="background:#c0392b"></i>破损区域</span>
+          <span><i style="background:#167a55"></i>姿态关键点</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>YOLOv8 多任务推理输出</h2><span class="sub" id="pipelineSub">等待检测</span></div>
+        <div class="card-body"><div class="pipeline" id="pipeline"></div></div>
+      </div>
+    </div>
+
+    <!-- 右：决策 + 复述 -->
+    <aside class="right-col">
+      <div class="card">
+        <div class="card-head"><h2>决策引擎</h2><span class="sub">人脸 → 帽在 → 佩戴 → 破损 → 等级</span></div>
+        <div class="card-body"><div id="decisionBox"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>检测复述</h2>
+          <div class="btn-row" style="flex:0">
+            <button class="btn small ghost" id="btnCopy">复制</button>
+            <button class="btn small ghost" id="btnExport">导出报告</button>
+          </div>
+        </div>
+        <div class="card-body"><div id="narrativeBox"></div></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ==================== 图片检测 ==================== -->
+<section id="tab-image" class="tab-panel">
+  <div class="notice">
+    <b>导入外部图片检测：</b>支持点击选择或拖拽 jpg / png / webp 图片。系统会读取图片<strong>真实像素</strong>，做 HSV 色相统计、判定安全帽颜色等级，并用网格聚类定位疑似安全帽区域。
+    <b>破损 / 佩戴方式 / 人脸结果</b>无法由色相统计可靠推断，默认由操作员在左侧复核表单确认；若已通过 <code>App.setSource()</code> 接入真实 YOLOv8 服务，则整条链路由模型自动完成，无需人工填写。
+  </div>
+  <div class="grid-image">
+    <aside>
+      <div class="card">
+        <div class="card-head"><h2>图片输入</h2><span class="sub">上传 / 拖拽 / 示例</span></div>
+        <div class="card-body">
+          <div class="drop-zone" id="dropZone">
+            <div class="dz-icon">＋</div>
+            <div class="dz-title">点击选择图片，或拖拽到此处</div>
+            <div class="dz-sub">支持 jpg / png / webp，自动标准化为 720 × 400</div>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn small primary" id="btnSample">生成示例图片</button>
+            <button class="btn small ghost" id="btnClearImage">清除</button>
+          </div>
+          <div class="divider"></div>
+          <div id="imgMeta" class="cr-detail">尚未导入图片</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>像素分析结果</h2><span class="sub">真实图像统计</span></div>
+        <div class="card-body" id="analysisBox"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>人工复核 / 参数</h2><span class="sub">接入模型后可省略</span></div>
+        <div class="card-body">
+          <div class="field"><label>刷脸识别员工</label><select id="imgStaff"></select></div>
+          <div class="check-grid" style="margin-bottom:10px">
+            <label class="check"><input type="checkbox" id="imgHelmet" checked>检测到安全帽</label>
+            <label class="check"><input type="checkbox" id="imgOnHead" checked>帽在头顶</label>
+          </div>
+          <div class="field">
+            <label>实际帽色</label><select id="imgColor"></select>
+          </div>
+          <div class="btn-row" style="margin-bottom:10px"><button class="btn small ghost" id="btnAutoColor">采用像素分析主色</button></div>
+          <div class="field"><label>盔体状态</label><select id="imgDamage"></select></div>
+          <div class="field"><label>佩戴方式</label><select id="imgWear"></select></div>
+          <div class="field">
+            <label>人脸相似度 <span id="imgFaceVal" style="color:var(--blue);font-weight:600">0.95</span></label>
+            <div class="range-row"><input type="range" id="imgFace" min="0.20" max="0.99" step="0.01" value="0.95"><div class="range-val" id="imgFaceDup">0.95</div></div>
+          </div>
+          <label class="check" style="margin-bottom:10px"><input type="checkbox" id="imgLive" checked>人脸活体检测通过</label>
+          <button class="btn primary" id="btnImgRun" style="width:100%">执行图片检测</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="center-col">
+      <div class="card">
+        <div class="scene-toolbar">
+          <label class="check"><input type="checkbox" id="imgShowBoxes" checked>候选框</label>
+          <label class="check"><input type="checkbox" id="imgShowGrid">分析网格</label>
+          <span class="chip amber" id="imgSourceChip" style="margin-left:auto">推理源：像素分析 + 人工复核</span>
+        </div>
+        <div class="scene-wrap"><svg id="imageSvg" viewBox="0 0 720 400" role="img" aria-label="导入图片与检测叠加"></svg></div>
+        <div class="legend">
+          <span><i style="background:#5b4bb7"></i>疑似安全帽区域（像素聚类）</span>
+          <span><i style="background:#c0392b"></i>破损复核标记</span>
+          <span><i style="background:#167a55"></i>闸机放行</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>与场景预设对比</h2><span class="sub">同一员工、同一阈值</span></div>
+        <div class="card-body">
+          <div class="field" style="max-width:340px;margin-bottom:10px"><label>对比的场景预设</label><select id="imgCompareScene"></select></div>
+          <div id="imgCompareNote" class="diff-box" style="margin:0">执行一次图片检测后，可与场景预设做判定对比。</div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="right-col">
+      <div class="card">
+        <div class="card-head"><h2>决策引擎</h2><span class="sub">五条规则串联</span></div>
+        <div class="card-body" id="imgDecision"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>检测复述</h2>
+          <div class="btn-row" style="flex:0">
+            <button class="btn small ghost" id="btnImgCopy">复制</button>
+            <button class="btn small ghost" id="btnImgExport">导出</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="imgNarrative"></div>
+          <button class="btn" id="btnImgSave" style="width:100%;margin-top:12px">写入通行台账</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ==================== 对比工作台 ==================== -->
+<section id="tab-compare" class="tab-panel">
+  <div class="card">
+    <div class="card-head"><h2>A / B 场景对比</h2><span class="sub">同一阈值与同一员工下，对比两种合规状态</span></div>
+    <div class="card-body">
+      <div class="compare-grid" style="margin-bottom:12px">
+        <div class="field" style="margin:0"><label>场景 A</label><select id="selSceneA"></select></div>
+        <div class="field" style="margin:0"><label>场景 B</label><select id="selSceneB"></select></div>
+      </div>
+      <div class="field"><label>对比员工（决定授权帽色）</label><select id="selCompareStaff" style="max-width:340px"></select></div>
+      <div id="diffBox" class="diff-box"></div>
+      <div class="compare-grid">
+        <div class="card side-card" style="margin:0"><div class="card-head"><h2>场景 A</h2><span class="side-tag chip blue" id="tagA">--</span></div><div class="card-body" id="sideA"></div></div>
+        <div class="card side-card" style="margin:0"><div class="card-head"><h2>场景 B</h2><span class="side-tag chip purple" id="tagB">--</span></div><div class="card-body" id="sideB"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>阈值灵敏度对比</h2><span class="sub">观察同一场景下阈值变化如何改变判定</span></div>
+    <div class="card-body">
+      <div class="compare-grid" style="margin-bottom:10px">
+        <div class="field" style="margin:0"><label>扫描阈值</label><select id="selSweepParam"><option value="damageProb">破损概率阈值</option><option value="faceScore">人脸相似度阈值</option><option value="wearConf">佩戴置信度阈值</option><option value="colorConf">颜色置信度阈值</option></select></div>
+        <div class="field" style="margin:0"><label>目标场景</label><select id="selSweepScene"></select></div>
+      </div>
+      <div class="chart-wrap"><svg id="sweepSvg" viewBox="0 0 680 190" role="img" aria-label="阈值灵敏度曲线"></svg></div>
+      <div id="sweepNote" class="diff-box" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>批量仿真：完整方案 vs 仅检测有无帽</h2>
+      <div class="btn-row" style="flex:0">
+        <select id="selBatchN" style="width:110px"><option value="200">200 次</option><option value="500">500 次</option><option value="1000">1000 次</option></select>
+        <button class="btn small primary" id="btnBatchRun">运行仿真</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap"><svg id="batchSvg" viewBox="0 0 680 210" role="img" aria-label="批量仿真对比柱状图"></svg></div>
+      <div id="batchNote" class="diff-box" style="margin-top:10px"></div>
+      <div id="batchTable"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 通行台账 ==================== -->
+<section id="tab-history" class="tab-panel">
+  <div class="card">
+    <div class="card-head">
+      <h2>通行台账</h2>
+      <div class="btn-row" style="flex:0">
+        <span class="chip gray" id="historyCount">0 条记录</span>
+        <button class="btn small ghost" id="btnClearHistory">清空</button>
+      </div>
+    </div>
+    <div class="card-body" id="historyBox"></div>
+  </div>
+</section>
+
+<!-- ==================== 系统说明 ==================== -->
+<section id="tab-about" class="tab-panel">
+  <div class="notice">
+    <b>运行模式说明：</b>当前开箱运行的是<b>确定性仿真推理源</b>，用于完整演示系统交互、可视化、对比与复述能力，不依赖摄像头、模型权重或 GPU。要接入真实 YOLOv8 权重，按下方步骤启动 <code>inference/yolov8_service.py</code> 并在界面「推理源」处切换；前端决策链与 JSON 契约保持一致，无需改动 UI。
+  </div>
+  <div class="about-grid">
+    <div class="card"><div class="card-head"><h2>系统架构</h2></div><div class="card-body">
+      <dl class="kv">
+        <dt>采集层</dt><dd>正面相机（人脸 / 下颚带）+ 斜上方相机（盔体 / 破损），由闸机红外信号同步取帧</dd>
+        <dt>身份层</dt><dd>人脸活体 + 1:N 比对，返回工号、工种、授权帽色</dd>
+        <dt>检测模型</dt><dd>yolov8s-seg / detect：头部、安全帽、人脸、下颚带四类目标</dd>
+        <dt>颜色分支</dt><dd>盔体 mask 内 HSV 主色 + yolov8s-cls 复核，输出颜色 → 等级映射</dd>
+        <dt>破损分支</dt><dd>盔体裁剪放大至 512 后分类（完好 / 裂纹 / 凹陷 / 缺口 / 老化），可叠加 OBB 检测裂纹</dd>
+        <dt>姿态分支</dt><dd>yolov8s-pose 取耳、鼻、头顶、下巴关键点 + 几何覆盖规则</dd>
+        <dt>决策层</dt><dd>五条规则串联，任一未通过即拒闸；支持规则开关做策略对比</dd>
+        <dt>执行层</dt><dd>开闸 / 声光报警 / 抓拍留证 / 台账记录 / 安保复核</dd>
+      </dl>
+    </div></div>
+    <div class="card"><div class="card-head"><h2>颜色等级映射（项目可配置）</h2></div><div class="card-body">
+      <table><thead><tr><th>颜色</th><th>等级</th><th>适用人员</th></tr></thead><tbody id="colorTable"></tbody></table>
+      <p class="cr-detail" style="margin-top:10px">映射表维护在 <code>assets/data.js → SITE_DATA.COLORS</code>，不同项目可改配色与授权逻辑，模型只负责识别颜色本身。</p>
+    </div></div>
+    <div class="card"><div class="card-head"><h2>接入真实 YOLOv8</h2></div><div class="card-body">
+      <ol class="about-list">
+        <li>安装依赖：<code>pip install -r inference/requirements.txt</code></li>
+        <li>放置训练权重：<code>inference/weights/detect.pt</code>、<code>cls_color.pt</code>、<code>cls_damage.pt</code>、<code>pose.pt</code></li>
+        <li>启动服务：<code>python inference/yolov8_service.py --port 8000</code></li>
+        <li>浏览器控制台执行：<code>App.setSource('http://127.0.0.1:8000')</code></li>
+        <li>服务 <code>/infer</code> 返回与本系统一致的 JSON，决策链自动复用</li>
+      </ol>
+      <pre># 训练示例（Ultralytics）
+yolo detect train model=yolov8s.pt data=helmet.yaml imgsz=960 epochs=150 batch=16
+yolo segment train model=yolov8s-seg.pt data=helmet_seg.yaml imgsz=960 epochs=120
+yolo classify train model=yolov8s-cls.pt data=helmet_color imgsz=224 epochs=80
+yolo pose train model=yolov8s-pose.pt data=head_kpt.yaml imgsz=640 epochs=100</pre>
+    </div></div>
+    <div class="card"><div class="card-head"><h2>数据与验收建议</h2></div><div class="card-body">
+      <ul class="about-list">
+        <li>标注：目标框 / 掩码 + 颜色属性 + 破损属性 + 佩戴状态 + 人员 ID，导出 YOLO 格式与属性 JSON</li>
+        <li>增强：强光、夜间补光、扬尘、反光、污渍、口罩遮挡、多人同框</li>
+        <li>验收：帽检出 recall ≥ 99%，佩戴判定 ≥ 97%，颜色 ≥ 98%，破损召回 ≥ 95%，端到端 &lt; 500 ms，误放行 = 0</li>
+        <li>破损检测最难，优先保召回；小缺陷需高分辨率裁剪与真实破损样本微调</li>
+        <li>断网降级：本地白名单缓存、恢复后补传；保留人工开闸与消防应急模式</li>
+        <li>合规：人脸与抓拍按最小必要采集、加密存储、设置保留期与访问审计</li>
+      </ul>
+    </div></div>
+    <div class="card"><div class="card-head"><h2>导入外部图片检测</h2></div><div class="card-body">
+      <ul class="about-list">
+        <li>「图片检测」标签页支持点击选择 / 拖拽上传 jpg、png、webp，或一键生成像素示例图</li>
+        <li>浏览器端 Canvas 读取真实像素 → HSV 色相直方图 → 白 / 黄 / 蓝 / 红主色判定 → 12×8 网格连通聚类定位疑似安全帽区域</li>
+        <li>结果复用同一套五条决策规则、中文复述、通行台账（可复述重放）与报告导出</li>
+        <li>可与「场景预设」并排对比，验证同一员工在不同佩戴状态下决策链的可解释性</li>
+      </ul>
+    </div></div>
+    <div class="card"><div class="card-head"><h2>图片模式的边界（重要）</h2></div><div class="card-body">
+      <ul class="about-list">
+        <li><b>颜色与候选框是真实像素计算</b>，不是编造的检测结果</li>
+        <li><b>破损、佩戴方式、人脸结果</b>无法由色相统计可靠推断，默认由操作员复核表单填写，界面与复述中均明确标注来源</li>
+        <li>接入真实 YOLOv8 服务后自动切换为模型推理：上传图片 → POST /infer（image_b64）→ 真实检测框与分类 → 决策 / 复述，无需人工复核</li>
+        <li>服务返回的是原图像素坐标，前端按标准化画布的缩放参数映射后再叠加显示</li>
+      </ul>
+    </div></div>
+  </div>
+</section>
+
+</main>
+
+<footer>工地入口安全帽佩戴检测系统 · YOLOv8 多任务方案 · 演示原型</footer>
+<div class="toast" id="toast"></div>
+
+<script src="assets/data.js"></script>
+<script src="assets/engine.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/image-lab.js"></script>
+</body>
+</html>
