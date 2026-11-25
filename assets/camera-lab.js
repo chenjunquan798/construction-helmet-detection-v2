@@ -22,8 +22,8 @@
     mode: 'simulation', uiOwned: false, active: false, paused: false, busy: false,
     stream: null, video: null, cap: null, capCtx: null, overlay: null, ovCtx: null,
     timer: null, fps: 2, frames: 0, seed: 8100,
-    analysis: null, boxes: [], decision: null, last: null,
-    scene: null, staff: null, leadText: '',
+    analysis: null, boxes: [], dBoxes: [], decision: null, last: null,
+    scene: null, staff: null,
     showBoxes: true, showGrid: false, autoCapture: true,
     lastDeny: false, lastCaptureAt: 0, yoloFail: false
   };
@@ -236,7 +236,6 @@
       '分析源：' + srcName + '，' +
       '主色 ' + D.COLORS[a.main].name + ' H≈' + a.hsvHue + '°（置信度 ' + fx(a.conf, 3) + '）。' +
       '员工 ' + staff.name + '（工号 ' + staff.id + '，' + staff.dept + ' / ' + staff.role + '）进入识别区。视频帧仅在浏览器内存中处理，不上传、不录制。');
-    st.leadText = nar.parts[0].text;
 
     var action = dec.allow ? '闸机开闸，抓拍帧可写入台账。'
       : '闸机保持关闭，声光提示「' + (E.CODE_TEXT[dec.code] || '校验未通过') + '」，抓拍留证并推送安保复核。';
@@ -287,7 +286,8 @@
     };
     var overlayBoxes = useYolo ? result.detection.items : boxes;
     var overlayDamage = useYolo ? result.damage.boxes : dBoxes;
-    st.last = ctx; st.decision = dec; st.analysis = a; st.boxes = overlayBoxes;
+    st.last = ctx; st.decision = dec; st.analysis = a;
+    st.boxes = overlayBoxes; st.dBoxes = overlayDamage;
     global.App.applyExternal(ctx);
     drawOverlay(a, overlayBoxes, overlayDamage, dec);
     renderMetrics(a, ctx, useYolo);
@@ -371,13 +371,14 @@
     c.narration = E.narrate({
       result: c.result, decision: c.decision, scene: c.scene, staff: c.staff
     });
-    if (st.leadText) {
-      c.narration.parts[0].text = st.leadText;
-      c.narration.full = c.narration.parts.map(function (p) { return '【' + p.title + '】' + p.text; }).join('\n');
+    /* 重算复述时也要保留「摄像头取帧」的措辞，不能退回双相机闸机的仿真说法 */
+    if (st.analysis && c.cam) {
+      cameraNarration(c.narration, c.decision, c.scene, c.staff, c.cam.frame,
+        c.result.source === 'yolov8', st.analysis);
     }
     st.decision = c.decision;
     global.App.applyExternal(c);
-    if (st.analysis) drawOverlay(st.analysis, st.boxes, [], c.decision);
+    if (st.analysis) drawOverlay(st.analysis, st.boxes, st.dBoxes, c.decision);
   }
 
   /* ---------------- 画面叠加 ---------------- */
