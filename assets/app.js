@@ -618,6 +618,41 @@
     clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove('show'); }, 2200);
   }
 
+  /* 读取推理服务 /model 的真实权重元信息，填入「系统说明」页卡片 */
+  function refreshModelInfo(url, quiet) {
+    var box = document.getElementById('modelInfoBox');
+    if (!box) return;
+    if (!url) {
+      box.textContent = '尚未连接推理服务。启动 inference/yolov8_service.py 后，在控制台执行 App.setSource(\'http://127.0.0.1:8000\')。';
+      return;
+    }
+    box.textContent = '正在读取 ' + url + '/model ...';
+    fetch(url + '/model').then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (j) {
+      var names = j.runtime_names
+        ? Object.keys(j.runtime_names).map(function (k) { return j.runtime_names[k]; })
+        : (j.class_names || []);
+      box.textContent = [
+        '权重文件：' + (j.path || 'anquanmao.pt'),
+        '加载状态：' + (j.loaded ? '已加载（真实推理生效）' : '未加载'),
+        '任务 / 架构：' + (j.runtime_task || j.task || 'detect') + ' / ' + (j.architecture || 'DetectionModel'),
+        '训练环境：Ultralytics ' + (j.version || '-') + ' · ' + (j.date || '-'),
+        '运行依赖：torch ' + (j.torch || '-') + ' / ultralytics ' + (j.ultralytics || '-'),
+        '类别（' + names.length + '）：' + names.join(' / '),
+        '覆盖：' + (j.covers || []).join('、'),
+        '不覆盖：' + (j.not_covered || []).join('、'),
+        '颜色：' + j.color_method + '；破损：' + j.damage_method,
+        '数据集：' + j.dataset
+      ].join('\n');
+      if (!quiet) toast('已读取真实权重元信息');
+    }).catch(function (e) {
+      box.textContent = '读取失败：' + e.message + '\n请确认服务已启动、端口正确且 CORS 可用。';
+      if (!quiet) toast('模型信息读取失败');
+    });
+  }
+
   function bindEvents() {
     Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function (b) {
       b.addEventListener('click', function () { switchTab(b.dataset.tab); });
@@ -734,6 +769,12 @@
       if (idx !== null && idx !== undefined) replay(parseInt(idx, 10));
     });
     $('btnClearHistory').addEventListener('click', function () { state.history = []; renderHistory(); toast('台账已清空'); });
+
+    var btnModel = document.getElementById('btnModelInfo');
+    if (btnModel) btnModel.addEventListener('click', function () {
+      refreshModelInfo(state.source ? state.source.url : '', false);
+      if (!state.source) toast('尚未连接推理服务，请先执行 App.setSource()');
+    });
   }
 
   function fallbackCopy(txt) {
@@ -778,11 +819,14 @@
       state.source = new E.RemoteYoloSource(url);
       state.seed += 1;
       runDetection({ silent: false });
+      refreshModelInfo(url, true);
       toast('已切换推理源：' + url);
       return state.source;
     },
+    modelInfo: refreshModelInfo,
     resetSource: function () {
-      state.source = null; state.seed += 1; runDetection({ silent: false }); toast('已恢复仿真推理源');
+      state.source = null; state.seed += 1; runDetection({ silent: false });
+      refreshModelInfo('', true); toast('已恢复仿真推理源');
     }
   };
 

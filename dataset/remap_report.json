@@ -1,0 +1,69 @@
+{
+  "source": "D:\\tupian",
+  "seed": 42,
+  "val_ratio": 0.2,
+  "image_count": 100,
+  "split": {
+    "train": 80,
+    "val": 20
+  },
+  "by_category": {
+    "val": 20,
+    "train": 80
+  },
+  "category_split": {
+    "correct_helmet": {
+      "total": 55,
+      "train": 44,
+      "val": 11
+    },
+    "no_helmet": {
+      "total": 15,
+      "train": 12,
+      "val": 3
+    },
+    "wrong_helmet": {
+      "total": 30,
+      "train": 24,
+      "val": 6
+    }
+  },
+  "ppe9": {
+    "boxes": {
+      "person": 225,
+      "hardhat": 180,
+      "vest_wrong": 12,
+      "gloves": 232,
+      "vest": 198,
+      "no_gloves": 135,
+      "no_vest": 15,
+      "no_hardhat": 27,
+      "hardhat_wrong": 30
+    },
+    "images": {
+      "train": 80,
+      "val": 20
+    }
+  },
+  "helmet4": {
+    "boxes": {
+      "正确佩戴": 180,
+      "未佩戴": 27,
+      "反戴": 30
+    },
+    "images": {
+      "train": 80,
+      "val": 20
+    },
+    "dropped_boxes": 817,
+    "empty_images": []
+  },
+  "consistency": {
+    "checked": 100,
+    "mismatch": []
+  },
+  "bad_label_lines": [],
+  "warnings": [
+    "helmet4 中「佩戴非安全帽」样本为 0：tupian 无对应标注，未伪造。微调会削弱该类，请补充真实样本或冻结分类头。"
+  ]
+}

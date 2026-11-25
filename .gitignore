@@ -9,3 +9,9 @@ node_modules/
 .workbuddy/
 .idea/
 .vscode/
+
+# 训练 / 评估运行产物与自动生成的临时文件
+runs/
+inference/weights/anquanmao_compat.pt
+inference/weights/anquanmao_finetuned.pt
+dataset/_*.json

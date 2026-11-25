@@ -1,0 +1,185 @@
+{
+  "weights": "C:\\Users\\王\\WorkBuddy\\2026-11-23-10-08-07\\release\\v2\\inference\\weights\\anquanmao.pt",
+  "bytes": 6494186,
+  "metadata": {
+    "is_zip": true,
+    "archive_prefix": [
+      "best"
+    ],
+    "n_storages": 359,
+    "version": "8.4.218",
+    "date": "2026-11-25T12:38:51.112708+00:00",
+    "task": "detect",
+    "architecture": "ultralytics.nn.tasks.DetectionModel",
+    "class_names": [
+      "正确佩戴",
+      "反戴",
+      "未佩戴",
+      "佩戴非安全帽"
+    ],
+    "base_model": "/ultralytics/weights/ultralytics/yolov8/yolov8n/yolov8n.pt"
+  },
+  "load": {
+    "ok": true,
+    "path": "C:\\Users\\王\\WorkBuddy\\2026-11-23-10-08-07\\release\\v2\\inference\\weights\\anquanmao.pt",
+    "attempt": 1,
+    "ultralytics": "8.4.218",
+    "torch": "2.15.0+cpu",
+    "task": "detect",
+    "names": {
+      "0": "正确佩戴",
+      "1": "反戴",
+      "2": "未佩戴",
+      "3": "佩戴非安全帽"
+    },
+    "device": "cpu"
+  },
+  "predictions": [
+    {
+      "image": "correct_helmet_010.jpg",
+      "detections": 1,
+      "items": [
+        {
+          "cls": "反戴",
+          "conf": 0.282,
+          "xyxy": [
+            1394.2,
+            244.6,
+            1498.4,
+            313.0
+          ]
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_012.jpg",
+      "detections": 1,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.486,
+          "xyxy": [
+            244.5,
+            109.1,
+            296.9,
+            151.2
+          ]
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_017.jpg",
+      "detections": 3,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.49,
+          "xyxy": [
+            1483.0,
+            235.9,
+            1572.8,
+            307.0
+          ]
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.431,
+          "xyxy": [
+            555.5,
+            171.3,
+            663.6,
+            242.0
+          ]
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.338,
+          "xyxy": [
+            1215.0,
+            224.9,
+            1311.7,
+            308.3
+          ]
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_020.jpg",
+      "detections": 2,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.602,
+          "xyxy": [
+            811.3,
+            234.5,
+            887.8,
+            293.8
+          ]
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.372,
+          "xyxy": [
+            582.0,
+            247.2,
+            656.1,
+            297.5
+          ]
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_021.jpg",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "correct_helmet_024.jpg",
+      "detections": 4,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.709,
+          "xyxy": [
+            553.0,
+            288.1,
+            636.9,
+            357.6
+          ]
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.657,
+          "xyxy": [
+            982.1,
+            239.3,
+            1064.4,
+            337.0
+          ]
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.606,
+          "xyxy": [
+            1278.0,
+            277.9,
+            1347.0,
+            343.1
+          ]
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.547,
+          "xyxy": [
+            249.3,
+            178.1,
+            314.6,
+            231.9
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "可以导入：YOLOv8n detect 权重成功加载并完成真实推理；类别为 4 类佩戴状态，接入推理服务后由 StateAdapter 映射到系统统一 schema。"
+}

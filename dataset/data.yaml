@@ -1,0 +1,16 @@
+# YOLO 数据集配置（来源：Simuletic CCTV PPE Compliance Detection 免费样本）
+# 许可：CC BY-NC 4.0，非商业用途，请署名 Simuletic
+path: .
+train: .
+val: .
+nc: 9
+names:
+  0: person
+  1: hardhat
+  2: hardhat_wrong
+  3: no_hardhat
+  4: vest
+  5: vest_wrong
+  6: no_vest
+  7: gloves
+  8: no_gloves

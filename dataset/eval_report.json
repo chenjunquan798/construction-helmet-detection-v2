@@ -1,0 +1,256 @@
+{
+  "weights": "C:\\Users\\王\\WorkBuddy\\2026-11-23-10-08-07\\release\\v2\\inference\\weights\\anquanmao.pt",
+  "data": "C:\\Users\\王\\WorkBuddy\\2026-11-23-10-08-07\\release\\v2\\dataset\\helmet4\\data.yaml",
+  "conf": 0.25,
+  "imgsz": 320,
+  "device": "cpu",
+  "names": {
+    "0": "正确佩戴",
+    "1": "反戴",
+    "2": "未佩戴",
+    "3": "佩戴非安全帽"
+  },
+  "overall": {
+    "precision": 0.1667,
+    "recall": 0.0417,
+    "mAP50": 0.0233,
+    "mAP50-95": 0.0024
+  },
+  "per_class": {
+    "正确佩戴": {
+      "mAP50": 0.07,
+      "mAP50-95": 0.0072
+    },
+    "反戴": {
+      "mAP50": 0.0,
+      "mAP50-95": 0.0
+    },
+    "未佩戴": {
+      "mAP50": 0.0,
+      "mAP50-95": 0.0
+    }
+  },
+  "per_image": [
+    {
+      "image": "correct_helmet_010.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 1,
+      "items": [
+        {
+          "cls": "反戴",
+          "conf": 0.282
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_012.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 1,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.486
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_017.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 3,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.49
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.431
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.338
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_020.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 2,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.602
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.372
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_021.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "correct_helmet_024.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 4,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.709
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.657
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.606
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.547
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_031.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 3,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.696
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.506
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.319
+        }
+      ]
+    },
+    {
+      "image": "correct_helmet_036.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "correct_helmet_050.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "correct_helmet_051.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "correct_helmet_054.jpg",
+      "filename_category": "correct_helmet",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "no_helmet_005.jpg",
+      "filename_category": "no_helmet",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "no_helmet_007.jpg",
+      "filename_category": "no_helmet",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "no_helmet_015.jpg",
+      "filename_category": "no_helmet",
+      "detections": 0,
+      "items": []
+    },
+    {
+      "image": "wrong_helmet_010.jpg",
+      "filename_category": "wrong_helmet",
+      "detections": 1,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.312
+        }
+      ]
+    },
+    {
+      "image": "wrong_helmet_014.jpg",
+      "filename_category": "wrong_helmet",
+      "detections": 1,
+      "items": [
+        {
+          "cls": "正确佩戴",
+          "conf": 0.353
+        }
+      ]
+    },
+    {
+      "image": "wrong_helmet_020.jpg",
+      "filename_category": "wrong_helmet",
+      "detections": 2,
+      "items": [
+        {
+          "cls": "未佩戴",
+          "conf": 0.801
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.303
+        }
+      ]
+    },
+    {
+      "image": "wrong_helmet_023.jpg",
+      "filename_category": "wrong_helmet",
+      "detections": 2,
+      "items": [
+        {
+          "cls": "未佩戴",
+          "conf": 0.705
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.658
+        }
+      ]
+    },
+    {
+      "image": "wrong_helmet_028.jpg",
+      "filename_category": "wrong_helmet",
+      "detections": 2,
+      "items": [
+        {
+          "cls": "未佩戴",
+          "conf": 0.793
+        },
+        {
+          "cls": "正确佩戴",
+          "conf": 0.785
+        }
+      ]
+    },
+    {
+      "image": "wrong_helmet_030.jpg",
+      "filename_category": "wrong_helmet",
+      "detections": 0,
+      "items": []
+    }
+  ],
+  "image_count": 20,
+  "total_detections": 22
+}

@@ -1,0 +1,13 @@
+# 由 tools/prepare_dataset.py 生成，请勿手工改动路径部分
+# path 相对仓库根目录，命令请在仓库根执行（脚本会自动 chdir）
+# 与 inference/weights/anquanmao.pt 的 model.names 对齐
+# tools/finetune.py 使用本文件做增量微调
+path: dataset/helmet4
+train: images/train
+val: images/val
+nc: 4
+names:
+  0: 正确佩戴
+  1: 反戴
+  2: 未佩戴
+  3: 佩戴非安全帽

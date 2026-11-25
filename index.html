@@ -395,17 +395,17 @@
 <!-- ==================== 系统说明 ==================== -->
 <section id="tab-about" class="tab-panel">
   <div class="notice">
-    <b>运行模式说明：</b>系统提供三种数据源：<b>确定性仿真推理源</b>（12 场景预设 + 批量 A/B 实验数据，开箱即跑、结果可复现）、<b>本机摄像头实时源</b>（真实像素分析，见「实时监控 › 实时数据源」）、<b>真实 YOLOv8 服务</b>（按下方步骤启动 <code>inference/yolov8_service.py</code> 后执行 <code>App.setSource()</code>）。三者输出同一 JSON schema，前端决策链与界面无需改动。
+    <b>运行模式说明：</b>系统提供三种数据源：<b>确定性仿真推理源</b>（12 场景预设 + 批量 A/B 实验数据，开箱即跑、结果可复现）、<b>本机摄像头实时源</b>（真实像素分析，见「实时监控 › 实时数据源」）、<b>真实 YOLOv8 服务</b>（已内置自训练权重 <code>anquanmao.pt</code>，启动 <code>inference/yolov8_service.py</code> 后执行 <code>App.setSource()</code>）。三者输出同一 JSON schema，前端决策链与界面无需改动。<b>真实模型只负责「有无帽 / 佩戴规范」两路</b>，颜色仍是真像素统计、破损仍需人工复核，边界见下方卡片。
   </div>
   <div class="about-grid">
     <div class="card"><div class="card-head"><h2>系统架构</h2></div><div class="card-body">
       <dl class="kv">
         <dt>采集层</dt><dd>正面相机（人脸 / 下颚带）+ 斜上方相机（盔体 / 破损），由闸机红外信号同步取帧</dd>
         <dt>身份层</dt><dd>人脸活体 + 1:N 比对，返回工号、工种、授权帽色</dd>
-        <dt>检测模型</dt><dd>yolov8s-seg / detect：头部、安全帽、人脸、下颚带四类目标</dd>
-        <dt>颜色分支</dt><dd>盔体 mask 内 HSV 主色 + yolov8s-cls 复核，输出颜色 → 等级映射</dd>
-        <dt>破损分支</dt><dd>盔体裁剪放大至 512 后分类（完好 / 裂纹 / 凹陷 / 缺口 / 老化），可叠加 OBB 检测裂纹</dd>
-        <dt>姿态分支</dt><dd>yolov8s-pose 取耳、鼻、头顶、下巴关键点 + 几何覆盖规则</dd>
+        <dt>检测模型</dt><dd><b>已接入 anquanmao.pt</b>（YOLOv8n detect，4 类：正确佩戴 / 反戴 / 未佩戴 / 佩戴非安全帽）；原方案的 head / helmet / face / strap 检测器仍作为可选分支保留</dd>
+        <dt>颜色分支</dt><dd>盔体框内 HSV 主色统计（真像素）；接入 <code>cls_color.pt</code> 后换成 yolov8s-cls 分类并输出颜色 → 等级映射</dd>
+        <dt>破损分支</dt><dd>规划为盔体裁剪放大至 512 后分类（完好 / 裂纹 / 凹陷 / 缺口 / 老化）；<b>当前自训练权重无此分支，返回「未评估·需人工复核」</b></dd>
+        <dt>姿态分支</dt><dd>规划为 yolov8s-pose 取耳、鼻、头顶、下巴关键点 + 几何覆盖规则；当前佩戴规范由状态模型类别映射</dd>
         <dt>决策层</dt><dd>五条规则串联，任一未通过即拒闸；支持规则开关做策略对比</dd>
         <dt>执行层</dt><dd>开闸 / 声光报警 / 抓拍留证 / 台账记录 / 安保复核</dd>
       </dl>
@@ -414,19 +414,31 @@
       <table><thead><tr><th>颜色</th><th>等级</th><th>适用人员</th></tr></thead><tbody id="colorTable"></tbody></table>
       <p class="cr-detail" style="margin-top:10px">映射表维护在 <code>assets/data.js → SITE_DATA.COLORS</code>，不同项目可改配色与授权逻辑，模型只负责识别颜色本身。</p>
     </div></div>
-    <div class="card"><div class="card-head"><h2>接入真实 YOLOv8</h2></div><div class="card-body">
+    <div class="card"><div class="card-head"><h2>接入真实 YOLOv8（权重已随仓库提供）</h2></div><div class="card-body">
       <ol class="about-list">
         <li>安装依赖：<code>pip install -r inference/requirements.txt</code></li>
-        <li>放置训练权重：<code>inference/weights/detect.pt</code>、<code>cls_color.pt</code>、<code>cls_damage.pt</code>、<code>pose.pt</code></li>
+        <li>权重已在仓库：<code>inference/weights/anquanmao.pt</code>；若因 zip 前缀加载失败，服务会自动生成 <code>anquanmao_compat.pt</code> 兼容副本</li>
+        <li>校验（可选）：<code>python tools/verify_model.py</code>；真实评估：<code>python tools/evaluate.py</code></li>
         <li>启动服务：<code>python inference/yolov8_service.py --port 8000</code></li>
-        <li>浏览器控制台执行：<code>App.setSource('http://127.0.0.1:8000')</code></li>
-        <li>服务 <code>/infer</code> 返回与本系统一致的 JSON，决策链自动复用</li>
+        <li>浏览器控制台：<code>App.setSource('http://127.0.0.1:8000')</code></li>
+        <li>服务 <code>/infer</code> 返回与本系统一致的 JSON；<code>GET /model</code> 与 <code>GET /health</code> 可查元信息与降级分支</li>
       </ol>
-      <pre># 训练示例（Ultralytics）
-yolo detect train model=yolov8s.pt data=helmet.yaml imgsz=960 epochs=150 batch=16
-yolo segment train model=yolov8s-seg.pt data=helmet_seg.yaml imgsz=960 epochs=120
-yolo classify train model=yolov8s-cls.pt data=helmet_color imgsz=224 epochs=80
-yolo pose train model=yolov8s-pose.pt data=head_kpt.yaml imgsz=640 epochs=100</pre>
+      <pre># 以 anquanmao.pt 为起点，用本地数据集增量微调（可选）
+python tools/finetune.py --epochs 30 --device cpu
+python inference/yolov8_service.py --state-weights inference/weights/anquanmao_finetuned.pt</pre>
+    </div></div>
+    <div class="card"><div class="card-head"><h2>已接入的自训练模型与本地数据集</h2></div><div class="card-body">
+      <table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody>
+        <tr><td>权重</td><td><code>anquanmao.pt</code> · 6.2 MB · YOLOv8n / detect / nc=4 · Ultralytics 8.4.218</td></tr>
+        <tr><td>类别</td><td>正确佩戴 · 反戴 · 未佩戴 · 佩戴非安全帽</td></tr>
+        <tr><td>真实接管</td><td>「有无安全帽」+「佩戴是否规范」两路的检测框、置信度、状态</td></tr>
+        <tr><td>仍为辅助 / 复核</td><td>颜色 = 盔体框内 HSV 真像素统计；破损 = <b>未评估·需人工复核</b>；人脸 = 既有刷脸系统</td></tr>
+        <tr><td>数据集</td><td><code>D:/tupian</code> 100 张 → <code>dataset/ppe9</code>（9 类）+ <code>dataset/helmet4</code>（4 类，80/20 分层）</td></tr>
+        <tr><td>许可 / 性质</td><td>Simuletic 合成 CCTV 图，<b>CC BY-NC 4.0</b>，非真人现场照片，无破损样本，须署名原作者</td></tr>
+      </tbody></table>
+      <p class="cr-detail" style="margin:10px 0">「佩戴非安全帽」在本地数据集中无样本，未伪造标注；微调会弱化该类，需补采真实图片。完整映射统计见 <code>dataset/remap_report.json</code>。</p>
+      <div class="btn-row"><button class="btn small ghost" id="btnModelInfo" type="button">查询运行中模型元信息</button></div>
+      <pre id="modelInfoBox" style="margin-top:10px;white-space:pre-wrap">尚未连接推理服务。按左侧步骤启动服务并执行 App.setSource() 后，点击按钮可读取 /model 返回的真实权重信息。</pre>
     </div></div>
     <div class="card"><div class="card-head"><h2>数据与验收建议</h2></div><div class="card-body">
       <ul class="about-list">
@@ -451,7 +463,7 @@ yolo pose train model=yolov8s-pose.pt data=head_kpt.yaml imgsz=640 epochs=100</p
         <li>「实时监控」左侧的「实时数据源」切换为<b>本机摄像头</b>后，浏览器通过 getUserMedia 取流，逐帧绘制到 720 × 400 画布并实时分析</li>
         <li>颜色与疑似安全帽区域由 <b>Canvas HSV 真实像素统计 + 12 × 8 网格聚类</b>得出，与「图片检测」共用同一个分析函数，不是伪造的检测结果</li>
         <li>四任务输出、五条决策规则、中文复述、阈值 / 规则开关、抓拍台账与报告导出全部复用同一套引擎，切换数据源无需改动界面</li>
-        <li>破损 / 佩戴方式 / 人脸活体无法由色相统计可靠推断，默认由实时复核表单填写；若已 <code>App.setSource()</code> 接入真实 YOLOv8，则每帧以 <code>image_b64</code> 送 <code>/infer</code> 自动判定</li>
+        <li>破损 / 佩戴方式 / 人脸活体无法由色相统计可靠推断，默认由实时复核表单填写；若已 <code>App.setSource()</code> 接入自训练权重，则每帧以 <code>image_b64</code> 送 <code>/infer</code>，由 <code>anquanmao.pt</code> 自动判定佩戴状态（破损仍需复核）</li>
         <li><b>隐私</b>：视频帧只在浏览器内存中处理，不上传、不录制；离开「实时监控」页签会自动停止摄像头；仅点击「抓拍」时当前帧以内存对象存入台账，刷新页面即清除</li>
         <li>摄像头要求安全上下文（https 或 localhost）；<code>file://</code> 直开可能被浏览器禁用，改用本地静态服务即可</li>
         <li><b>仿真模拟完全保留</b>：切回「仿真模拟」后 12 个场景预设、阈值灵敏度扫描与批量 A/B 实验数据不受任何影响</li>
@@ -461,7 +473,7 @@ yolo pose train model=yolov8s-pose.pt data=head_kpt.yaml imgsz=640 epochs=100</p
       <ul class="about-list">
         <li><b>颜色与候选框是真实像素计算</b>，不是编造的检测结果</li>
         <li><b>破损、佩戴方式、人脸结果</b>无法由色相统计可靠推断，默认由操作员复核表单填写，界面与复述中均明确标注来源</li>
-        <li>接入真实 YOLOv8 服务后自动切换为模型推理：上传图片 → POST /infer（image_b64）→ 真实检测框与分类 → 决策 / 复述，无需人工复核</li>
+        <li>接入自训练权重后自动切换为模型推理：上传图片 → POST /infer（image_b64）→ <code>anquanmao.pt</code> 的真实检测框与 4 类佩戴状态 → 决策 / 复述；<b>破损仍返回「未评估·需人工复核」，颜色仍为盔体框内真像素统计</b></li>
         <li>服务返回的是原图像素坐标，前端按标准化画布的缩放参数映射后再叠加显示</li>
       </ul>
     </div></div>

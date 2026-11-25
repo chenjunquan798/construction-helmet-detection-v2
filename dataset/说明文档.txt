@@ -1,0 +1,33 @@
+安全帽佩戴状态检测数据集说明
+========================================
+
+一、数据概况
+- 图片总数：100 张 JPG（约 36 MB），分辨率 1672×941
+- 配套 YOLO 标注：labels 文件夹内 100 个 .txt（与图片同名）
+- 配置文件：data.yaml（9 个类别，Ultralytics 可直接读取）
+- 明细表：dataset_manifest.csv（新文件名 / 类别 / 原始文件名 / 数据集划分）
+
+二、分类构成
+- correct_helmet_001 ~ 055：正确佩戴安全帽（55 张）
+- wrong_helmet_001 ~ 030：不规范佩戴（30 张）
+- no_helmet_001 ~ 015：未佩戴安全帽（15 张）
+
+三、与判定依据的对应关系
+1. 安全帽未戴在头上：wrong_helmet 类中大量样本为安全帽拿在手中、放在台面，头顶裸露。
+2. 安全帽反戴 / 帽带松散 / 角度偏移：wrong_helmet 类中标注为 hardhat_wrong 的样本。
+   注意：远距离 CCTV 视角下部分细微差异（如帽带松紧）肉眼不易分辨，训练时建议结合标注框判断。
+3. 未佩戴安全帽（裸头、棒球帽、针织帽代替）：no_helmet 类，标注为 no_hardhat。
+4. 安全帽明显破损仍佩戴：本公开数据集中没有此类样本，需另行补充采集或生成。
+
+四、来源与许可
+- 来源：Simuletic CCTV PPE Compliance Detection Dataset 免费样本（200 张中筛选 100 张）
+- 项目地址：https://github.com/Simuletic/cctv-ppe-compliance-detection-dataset
+- 许可：CC BY-NC 4.0 —— 允许非商业用途的分享与改编，使用时需署名 Simuletic。
+  若用于商业项目，请向原作者获取商业许可。
+- 图像性质：全部为合成（synthetic）CCTV 监控视角图像，非真人真实现场照片。
+  场景为建筑工地、仓库物流、工厂车间；包含白天、夜间红外等光照条件。
+
+五、使用建议
+- 本样本量（100 张）仅适合做格式验证、流程调试或小样本试验，不足以训练可部署的检测器。
+- 建议补充真实工地照片，尤其是"破损安全帽仍佩戴"类别，再与本数据混合训练。
+- 训练示例：yolo detect train data=data.yaml model=yolo11n.pt epochs=50 imgsz=960
