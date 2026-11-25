@@ -38,8 +38,57 @@
 <section id="tab-monitor" class="tab-panel active">
   <div class="grid-monitor">
 
-    <!-- 左：控制台 -->
+    <!-- 左：数据源 + 控制台 -->
     <aside>
+      <div class="card">
+        <div class="card-head"><h2>实时数据源</h2><span class="sub">两种模式随时切换</span></div>
+        <div class="card-body">
+          <div class="seg" id="dataSourceSeg" style="display:flex;width:100%">
+            <button class="active" data-source="simulation" style="flex:1">仿真模拟</button>
+            <button data-source="camera" style="flex:1">本机摄像头</button>
+          </div>
+
+          <div id="cameraControls" hidden>
+            <div class="field" style="margin-top:12px">
+              <label>分析帧率</label>
+              <select id="camFps">
+                <option value="1">1 fps · 低负载</option>
+                <option value="2" selected>2 fps · 推荐</option>
+                <option value="4">4 fps · 更灵敏</option>
+              </select>
+            </div>
+            <div class="btn-row" style="margin-top:10px">
+              <button class="btn small primary" id="btnCamStart">开启摄像头</button>
+              <button class="btn small ghost" id="btnCamStop" disabled>停止</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn small" id="btnCamSnapshot">抓拍当前帧并写入台账</button>
+            </div>
+            <label class="check" style="margin-top:10px"><input type="checkbox" id="camAutoCapture" checked>拦截帧自动留证（4 秒冷却）</label>
+            <div id="camStatus" class="cam-status">未开启 · 视频帧仅在浏览器内存中处理</div>
+
+            <div class="divider"></div>
+            <p class="section-title">实时复核项（像素统计无法可靠推断）</p>
+            <div class="field"><label>盔体状态</label><select id="camDamage"></select></div>
+            <div class="field"><label>佩戴方式</label><select id="camWear"></select></div>
+            <div class="field">
+              <label>人脸相似度 <span id="camFaceLbl" style="color:var(--blue);font-weight:600">0.95</span></label>
+              <div class="range-row"><input type="range" id="camFace" min="0.20" max="0.99" step="0.01" value="0.95"><div class="range-val" id="camFaceVal">0.95</div></div>
+            </div>
+            <div class="check-grid" style="margin-top:8px">
+              <label class="check"><input type="checkbox" id="camLive" checked>人脸活体通过</label>
+              <label class="check"><input type="checkbox" id="camHelmet" checked>画面中有帽</label>
+              <label class="check"><input type="checkbox" id="camOnHead" checked>帽在头顶</label>
+            </div>
+            <div class="field" style="margin-top:10px"><label>帽色</label><select id="camColor"></select></div>
+            <p class="cr-detail" style="margin:8px 0 0">颜色与候选区域来自摄像头帧的<strong>真实像素</strong>；破损 / 佩戴 / 人脸由本表单复核，复述中会标明来源。接入真实 YOLOv8 服务后自动改为模型推理。</p>
+          </div>
+
+          <p class="cr-detail" id="sourceHint" style="margin:10px 0 0">仿真模拟：12 个场景预设、阈值、规则开关与批量实验数据全部保留，不受摄像头影响。</p>
+          <p class="cr-detail" style="margin:8px 0 0">摄像头需通过 <code>https</code> 或 <code>localhost</code> 打开。若直接双击 <code>file://</code> 无法调用，可在项目目录执行 <code>python -m http.server 8000</code> 后访问 <code>http://127.0.0.1:8000</code>。</p>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-head"><h2>控制台</h2><span class="sub">单次检测</span></div>
         <div class="card-body">
@@ -120,12 +169,22 @@
             <button data-view="front">正面视角</button>
             <button data-view="top">顶部视角</button>
           </div>
-          <label class="check"><input type="checkbox" id="chkBoxes" checked>检测框</label>
-          <label class="check"><input type="checkbox" id="chkKeypoints" checked>姿态关键点</label>
+          <label class="check" id="lblBoxes"><input type="checkbox" id="chkBoxes" checked>检测框</label>
+          <label class="check" id="lblKeypoints"><input type="checkbox" id="chkKeypoints" checked>姿态关键点</label>
+          <label class="check" id="camLblBoxes" hidden><input type="checkbox" id="camShowBoxes" checked>候选框</label>
+          <label class="check" id="camLblGrid" hidden><input type="checkbox" id="camShowGrid">分析网格</label>
           <span class="chip gray" id="frameChip" style="margin-left:auto">frame_--</span>
         </div>
-        <div class="scene-wrap"><svg id="sceneSvg" viewBox="0 0 720 400" role="img" aria-label="闸机通道监控画面"></svg></div>
-        <div class="legend">
+        <div class="scene-wrap">
+          <svg id="sceneSvg" viewBox="0 0 720 400" role="img" aria-label="闸机通道监控画面"></svg>
+          <div class="camera-stage" id="cameraStage" hidden>
+            <video id="cameraVideo" autoplay playsinline muted></video>
+            <canvas id="cameraOverlay" width="720" height="400"></canvas>
+            <img id="cameraStill" alt="台账重放的抓拍帧" hidden>
+            <div class="camera-badge" id="cameraBadge">● LIVE · 本机摄像头</div>
+          </div>
+        </div>
+        <div class="legend" id="sceneLegend">
           <span><i style="background:#2563a8"></i>头部框</span>
           <span><i style="background:#0e7c86"></i>人脸框</span>
           <span><i style="background:#5b4bb7"></i>安全帽框</span>
@@ -133,11 +192,22 @@
           <span><i style="background:#c0392b"></i>破损区域</span>
           <span><i style="background:#167a55"></i>姿态关键点</span>
         </div>
+        <div class="legend" id="camLegend" hidden>
+          <span><i style="background:#5b4bb7"></i>疑似安全帽区域（像素聚类）</span>
+          <span><i style="background:#c0392b"></i>破损复核标记</span>
+          <span><i style="background:#167a55"></i>闸机放行</span>
+          <span style="color:#94a3b8">视频帧不上传、不录制，仅在本机内存分析</span>
+        </div>
       </div>
 
       <div class="card">
         <div class="card-head"><h2>YOLOv8 多任务推理输出</h2><span class="sub" id="pipelineSub">等待检测</span></div>
         <div class="card-body"><div class="pipeline" id="pipeline"></div></div>
+      </div>
+
+      <div class="card" id="camMetricsCard" hidden>
+        <div class="card-head"><h2>实时像素分析（摄像头帧）</h2><span class="sub" id="camMetricsSub">每帧真实计算 · 视频不出浏览器</span></div>
+        <div class="card-body" id="camMetrics"></div>
       </div>
     </div>
 
@@ -325,7 +395,7 @@
 <!-- ==================== 系统说明 ==================== -->
 <section id="tab-about" class="tab-panel">
   <div class="notice">
-    <b>运行模式说明：</b>当前开箱运行的是<b>确定性仿真推理源</b>，用于完整演示系统交互、可视化、对比与复述能力，不依赖摄像头、模型权重或 GPU。要接入真实 YOLOv8 权重，按下方步骤启动 <code>inference/yolov8_service.py</code> 并在界面「推理源」处切换；前端决策链与 JSON 契约保持一致，无需改动 UI。
+    <b>运行模式说明：</b>系统提供三种数据源：<b>确定性仿真推理源</b>（12 场景预设 + 批量 A/B 实验数据，开箱即跑、结果可复现）、<b>本机摄像头实时源</b>（真实像素分析，见「实时监控 › 实时数据源」）、<b>真实 YOLOv8 服务</b>（按下方步骤启动 <code>inference/yolov8_service.py</code> 后执行 <code>App.setSource()</code>）。三者输出同一 JSON schema，前端决策链与界面无需改动。
   </div>
   <div class="about-grid">
     <div class="card"><div class="card-head"><h2>系统架构</h2></div><div class="card-body">
@@ -376,6 +446,17 @@ yolo pose train model=yolov8s-pose.pt data=head_kpt.yaml imgsz=640 epochs=100</p
         <li>可与「场景预设」并排对比，验证同一员工在不同佩戴状态下决策链的可解释性</li>
       </ul>
     </div></div>
+    <div class="card"><div class="card-head"><h2>本机摄像头实时演示</h2></div><div class="card-body">
+      <ul class="about-list">
+        <li>「实时监控」左侧的「实时数据源」切换为<b>本机摄像头</b>后，浏览器通过 getUserMedia 取流，逐帧绘制到 720 × 400 画布并实时分析</li>
+        <li>颜色与疑似安全帽区域由 <b>Canvas HSV 真实像素统计 + 12 × 8 网格聚类</b>得出，与「图片检测」共用同一个分析函数，不是伪造的检测结果</li>
+        <li>四任务输出、五条决策规则、中文复述、阈值 / 规则开关、抓拍台账与报告导出全部复用同一套引擎，切换数据源无需改动界面</li>
+        <li>破损 / 佩戴方式 / 人脸活体无法由色相统计可靠推断，默认由实时复核表单填写；若已 <code>App.setSource()</code> 接入真实 YOLOv8，则每帧以 <code>image_b64</code> 送 <code>/infer</code> 自动判定</li>
+        <li><b>隐私</b>：视频帧只在浏览器内存中处理，不上传、不录制；离开「实时监控」页签会自动停止摄像头；仅点击「抓拍」时当前帧以内存对象存入台账，刷新页面即清除</li>
+        <li>摄像头要求安全上下文（https 或 localhost）；<code>file://</code> 直开可能被浏览器禁用，改用本地静态服务即可</li>
+        <li><b>仿真模拟完全保留</b>：切回「仿真模拟」后 12 个场景预设、阈值灵敏度扫描与批量 A/B 实验数据不受任何影响</li>
+      </ul>
+    </div></div>
     <div class="card"><div class="card-head"><h2>图片模式的边界（重要）</h2></div><div class="card-body">
       <ul class="about-list">
         <li><b>颜色与候选框是真实像素计算</b>，不是编造的检测结果</li>
@@ -396,5 +477,6 @@ yolo pose train model=yolov8s-pose.pt data=head_kpt.yaml imgsz=640 epochs=100</p
 <script src="assets/engine.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/image-lab.js"></script>
+<script src="assets/camera-lab.js"></script>
 </body>
 </html>

@@ -175,6 +175,11 @@
 
   /* ---------------- 主流程 ---------------- */
   function runDetection(opts) {
+    /* 摄像头接管时，控制台参数变化应作用于当前实时帧，而不是重新跑一遍仿真 */
+    if (global.CameraLab && global.CameraLab.isActive()) {
+      global.CameraLab.tick();
+      return Promise.resolve(state.last);
+    }
     var cfg = snapshot();
     var staff = getStaff();
     var cs = currentScene();
@@ -200,6 +205,7 @@
   }
 
   function refreshFromLast() {
+    if (global.CameraLab && global.CameraLab.isActive()) { global.CameraLab.refresh(); return; }
     if (!state.last) return;
     var c = state.last;
     c.decision = E.decide(c.result, { thresholds: state.thresholds, enabled: state.enabled });
@@ -429,6 +435,13 @@
 
   function replay(i) {
     var h = state.history[i]; if (!h) return;
+    if (h.cameraOnly && global.CameraLab) {
+      global.CameraLab.replay(h);
+      switchTab('monitor');
+      toast('已重放摄像头抓拍帧的复述');
+      return;
+    }
+    if (global.CameraLab) global.CameraLab.deactivate();
     if (h.imageOnly && global.ImageLab) {
       global.ImageLab.replay(h);
       switchTab('image');
@@ -593,6 +606,11 @@
     Array.prototype.forEach.call(document.querySelectorAll('.tab-panel'), function (p) {
       p.classList.toggle('active', p.id === 'tab-' + name);
     });
+    /* 隐私：离开实时监控页立即停流，回来时再恢复 */
+    if (global.CameraLab) {
+      if (name === 'monitor') global.CameraLab.resume();
+      else global.CameraLab.pause();
+    }
   }
 
   function toast(msg) {
@@ -647,6 +665,7 @@
       syncControls(s); state.seed += 1; runDetection({ silent: false });
     });
     $('btnReset').addEventListener('click', function () {
+      if (global.CameraLab) global.CameraLab.deactivate();
       state.thresholds = Object.assign({}, D.DEFAULT_THRESHOLDS);
       state.enabled = Object.assign({}, E.STRATEGIES.full.enabled);
       state.overrides = null; state.source = null;
@@ -684,9 +703,12 @@
         '帧 ID：frame_' + c.result.seed + ' | 通道：' + c.result.channel,
         '员工：' + c.staff.name + '（' + c.staff.id + '） | 工种：' + c.staff.role,
         '场景：' + c.scene.label,
-        '推理源：' + (state.source ? '真实 YOLOv8 服务' : '仿真推理'),
+        '推理源：' + (c.cameraOnly ? '本机摄像头（实时像素分析 + 复核）' : state.source ? '真实 YOLOv8 服务' : '仿真推理'),
         '', c.narration.full, '', '--- 决策明细 ---'
       ];
+      if (c.cameraOnly && c.cam) {
+        lines.push('数据源：本机摄像头实时帧 #' + c.cam.frame + '；颜色与候选区域由 Canvas HSV 真实像素统计得出，破损 / 佩戴 / 人脸为操作员复核');
+      }
       c.decision.checks.forEach(function (x) {
         lines.push(x.order + '. ' + x.label + '：' + (x.skipped ? '跳过' : x.pass ? '通过' : '未通过') + ' | ' + x.detail);
       });
@@ -733,6 +755,20 @@
     state: state,
     run: runDetection,
     toast: toast,
+    /* 外部数据源（本机摄像头）复用四任务 / 决策 / 复述面板，但不触碰仿真 SVG 画面 */
+    applyExternal: function (ctx) {
+      state.last = ctx;
+      renderPipeline(ctx.result);
+      renderDecision(ctx.decision);
+      renderNarrative(ctx.narration);
+      $('channelChip').textContent = ctx.result.channel;
+      $('frameChip').textContent = ctx.cameraOnly && ctx.cam ? 'CAM · 帧 ' + ctx.cam.frame : 'frame_' + ctx.result.seed;
+      $('pipelineSub').textContent = ctx.scene.label + ' · ' + ctx.result.ts;
+      $('sourceChip').textContent = ctx.cameraOnly ? '推理源：本机摄像头（像素分析）' : (state.source ? '推理源：真实 YOLOv8 服务' : '推理源：仿真推理');
+      $('modeChip').className = 'chip ' + (ctx.cameraOnly ? 'green' : state.source ? 'green' : 'amber');
+      $('modeChip').innerHTML = '<span class="dot"></span>' +
+        (ctx.cameraOnly ? '实时摄像头模式' : state.source ? '真实模型接入' : '演示仿真模式');
+    },
     addHistory: function (ctx) {
       state.history.unshift(ctx);
       if (state.history.length > 80) state.history.pop();

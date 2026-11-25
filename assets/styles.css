@@ -236,3 +236,39 @@ pre {
 }
 .toast.show { opacity: 1; transform: translateY(0); }
 footer { text-align: center; color: var(--faint); font-size: 11px; padding: 0 20px 24px; }
+
+/* ---------- 本机摄像头实时演示 ---------- */
+[hidden] { display: none !important; }
+.camera-stage {
+  position: relative; width: 100%; aspect-ratio: 720 / 400;
+  background: #0f172a; border-radius: 8px; border: 1px solid var(--border);
+  overflow: hidden;
+}
+.camera-stage video,
+.camera-stage canvas,
+.camera-stage img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+/* 不做 CSS 镜像：视频、分析画布与叠加层三者坐标严格一致，检测框才不会左右颠倒 */
+.camera-stage canvas { pointer-events: none; }
+.camera-badge {
+  position: absolute; left: 12px; top: 12px; z-index: 2;
+  background: rgba(15, 23, 42, .72); color: #fff; font-size: 11px; font-weight: 600;
+  padding: 5px 10px; border-radius: 6px; letter-spacing: .3px;
+}
+.cam-status {
+  margin-top: 10px; padding: 8px 10px; border-radius: 7px; font-size: 11px; line-height: 1.55;
+  background: #f1f5f9; border: 1px solid var(--border); color: var(--muted);
+}
+.cam-status.ok { background: var(--green-soft); border-color: #bfe2ce; color: var(--green); }
+.cam-status.err { background: var(--red-soft); border-color: #f0c4c0; color: var(--red); }
+.cam-status.warn { background: var(--amber-soft); border-color: #f0d9ad; color: var(--amber); }
+.cam-kv { display: grid; grid-template-columns: 96px 1fr; gap: 6px 10px; font-size: 11.5px; margin-bottom: 10px; }
+.cam-kv dt { color: var(--muted); }
+.cam-kv dd { margin: 0; color: var(--text); }
+.cam-bars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 16px; }
+.cam-bar-row { display: grid; grid-template-columns: 34px 1fr 44px; gap: 8px; align-items: center; font-size: 11px; color: var(--muted); }
+.cam-bar-row .bar span { border-radius: 4px; }
+.cam-foot { margin-top: 9px; font-size: 11px; line-height: 1.6; color: var(--muted); }
+.cam-warn { margin-top: 8px; padding: 8px 10px; border-radius: 7px; background: var(--amber-soft); border: 1px solid #f0d9ad; font-size: 11px; line-height: 1.55; }
